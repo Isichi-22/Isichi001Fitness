@@ -1,23 +1,37 @@
 package com.isichi001.isichi001fitness
 
+//import android.R.attr.name
+import android.R.attr.text
+import android.content.Context
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.interaction.FocusInteraction
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Button
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.isichi001.isichi001fitness.ui.theme.Isichi001FitnessTheme
+import androidx.compose.material3.Surface
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -25,224 +39,100 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             Isichi001FitnessTheme {
-                HomeScreen()
-                //FocusTimerScreen()
-                //ReflectionScreen()
-
+                //Scaffold- layout component for material design layout
+                // top app bar, bottom bar, drawer ...
+                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                    // Greeting(
+                    //   name = "Android",
+                    //   modifier = Modifier.padding(innerPadding)
+                    //)
+                    Testlayout(modifier = Modifier.padding(innerPadding))
+                }
             }
         }
     }
 }
-
 @Composable
-fun HomeScreen() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFD6EAF8))
-            .padding(16.dp),
-        verticalArrangement = Arrangement.SpaceBetween
-    ) {
-
-        Column {
-            Text(
-                text = "Hello, Laurreine 👋",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Text(text = "\"Stay focused and consistent!\"")
-        }
-
-        Column {
-            Text(text = "Today's Progress", fontWeight = FontWeight.SemiBold)
-            LinearProgressIndicator(
-                progress = 0.6f,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(10.dp)
-                    .padding(vertical = 8.dp),
-                color = Color(0xFF3498DB)
-            )
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
+fun Testlayout(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    Row (modifier = modifier.fillMaxSize()){
+        Column (modifier = Modifier.fillMaxHeight().width(100.dp).background(Color.Red),
+            verticalArrangement = Arrangement.SpaceEvenly
         ) {
-            StatCard(title = "Tasks", value = "5")
-            StatCard(title = "Focus Hours", value = "2.5h")
-        }
+            repeat(6){
+                //clickable image
+                val context = LocalContext.current
+                val dice_num = 1 + it
+                //display a dice
+                Image(
+                    painter = painterResource(image_ids[it]),
+                    contentDescription = "Dice $it")
+                modifier.clickable{
+                    Toast.makeText(context, "Click dice $it", Toast.LENGTH_SHORT).show()
 
-        Column {
-            Text(text = "Today's Tasks", fontWeight = FontWeight.SemiBold)
-            Spacer(modifier = Modifier.height(6.dp))
-            TaskItem("Study for Algorithms Exam")
-            TaskItem("Watch Networking Lecture")
-            TaskItem("Group Project Research")
-        }
+                }
 
-        Button(
-            onClick = { },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(Color(0xFF3498DB))
-        ) {
-            Text("Add Task")
-        }
-    }
-}
 
-@Composable
-fun StatCard(title: String, value: String) {
-    Card(
-        modifier = Modifier
-            .width(150.dp)
-            .padding(4.dp),
-        shape = RoundedCornerShape(10.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .background(Color.White)
-                .padding(12.dp),
+                Image(painter = painterResource(image_ids[it]),
+                    contentDescription = "Dice $it")
+
+                Image(painter = painterResource(image_ids[it]),
+                    contentDescription = "Dice $it")
+
+                Image(painter = painterResource(image_ids[it]),
+                    contentDescription = "Dice $it")
+
+                Image(painter = painterResource(image_ids[it]),
+                    contentDescription = "Dice $it")
+
+
+            }
+        }
+        Column (modifier = Modifier.fillMaxHeight().width(100.dp).background(Color.Yellow),
+            verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(text = title, fontWeight = FontWeight.SemiBold)
-            Text(text = value, fontSize = 20.sp, color = Color(0xFF3498DB))
+            Text(text = "Column 2")
         }
-    }
-}
-
-@Composable
-fun TaskItem(task: String) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Text(
-            text = task,
-            modifier = Modifier.padding(10.dp)
-        )
-    }
-}
-
-@Composable
-fun FocusTimerScreen() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFD4EFDF))
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = "Focus Timer ⏳",
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-
-        Text(
-            text = "00:50:00",
-            fontSize = 40.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-        
-        Row(
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            modifier = Modifier.fillMaxWidth()
+        Column (modifier = Modifier.fillMaxHeight().fillMaxWidth().background(Color.Green),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Button(onClick = { }) { Text("Start") }
-            Button(onClick = { }) { Text("Pause") }
-            Button(onClick = { }) { Text("Reset") }
-        }
-
-        Spacer(modifier = Modifier.height(25.dp))
-
-        Text(text = "How are you feeling?", fontWeight = FontWeight.SemiBold)
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
-            Text(text = "😊")
-            Text(text = "😴")
-            Text(text = "😕")
-        }
-
-        Spacer(modifier = Modifier.height(25.dp))
-
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(100.dp),
-            shape = RoundedCornerShape(8.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(10.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(text = "Write a quick note about your session...")
+           // Text(text = "Column 3")
+            Button(onClick =  {
+                Toast.makeText(context, "You clicked me", Toast.LENGTH_SHORT).show()
+            })  {
+                    Text("Click me")
+                }
             }
         }
     }
-}
+
 
 @Composable
-fun ReflectionScreen() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFE8DAEF))
-            .padding(16.dp),
-        verticalArrangement = Arrangement.SpaceBetween
-    ) {
+fun Greeting(name: String, modifier: Modifier = Modifier) {
+    Surface(color = Color.Green) {
         Text(
-            text = "Weekly Reflection",
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold
+            text = "Hello, $name!",
+            modifier = modifier .padding(24.dp)
         )
-
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(150.dp),
-            shape = RoundedCornerShape(10.dp)
-        ) {
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                Text(text = "[Bar Chart Placeholder]")
-            }
-        }
-
-        Column {
-            Text(text = "Summary", fontWeight = FontWeight.SemiBold)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text("• Total study time: 14h")
-            Text("• Completed tasks: 12")
-            Text("• Average focus: 78%")
-        }
-
-        Column {
-            Text(text = "Insights", fontWeight = FontWeight.SemiBold)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text("• Your best focus time was between 9–11am.")
-            Text("• Try reducing evening sessions for better rest.")
-        }
     }
 }
 
 @Preview(showBackground = true)
 @Composable
-fun HomePreview() { HomeScreen() }
+fun GreetingPreview() {
+    Isichi001FitnessTheme {
+        Greeting("Android")
+    }
+}
 
-@Preview(showBackground = true)
-@Composable
-fun TimerPreview() { FocusTimerScreen() }
+private val image_ids = listOf (
+    R.drawable.dice_1,
+    R.drawable.dice_2,
+    R.drawable.dice_3,
+    R.drawable.dice_4,
+    R.drawable.dice_5,
+    R.drawable.dice_6
+)
 
-@Preview(showBackground = true)
-@Composable
-fun ReflectionPreview() { ReflectionScreen() }
