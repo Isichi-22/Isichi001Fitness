@@ -1,5 +1,6 @@
 package com.isichi001.isichi001fitness
 
+import android.R.attr.onClick
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -9,10 +10,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -35,19 +39,36 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-/* ------------------------- NAVIGATION GRAPH ------------------------- */
+/* ------------------------- NAVIGATION ------------------------- */
 @Composable
 fun FitnessAppNavigation() {
     val navController = rememberNavController()
 
     NavHost(
         navController = navController,
-        startDestination = "home"
+        startDestination = "login"  // 👈 start from login page
     ) {
+        composable("login") {
+            LoginScreen(
+                onLoginSuccess = { navController.navigate("home") },
+                onNavigateToRegister = { navController.navigate("register") }
+            )
+        }
+        composable("register") {
+            RegisterScreen(
+                onRegisterSuccess = { navController.navigate("home") },
+                onNavigateToLogin = { navController.popBackStack() }
+            )
+        }
         composable("home") {
             HomeScreen(
                 onNavigateToTimer = { navController.navigate("focusTimer") },
-                onNavigateToReflection = { navController.navigate("reflection") }
+                onNavigateToReflection = { navController.navigate("reflection") },
+                onLogout = {
+                    navController.navigate("login") {
+                        popUpTo("home") { inclusive = true }
+                    }
+                }
             )
         }
         composable("focusTimer") {
@@ -59,11 +80,13 @@ fun FitnessAppNavigation() {
     }
 }
 
+
 /* ------------------------- HOME SCREEN ------------------------- */
 @Composable
 fun HomeScreen(
     onNavigateToTimer: () -> Unit,
-    onNavigateToReflection: () -> Unit
+    onNavigateToReflection: () -> Unit,
+    onLogout: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -128,6 +151,14 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(Color(0xFF9B59B6))
             ) { Text("Go to Reflection") }
+            Button(
+                onClick = { onLogout() },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(Color(0xFFE74C3C))
+            ) {
+                Text("Logout")
+            }
+
         }
     }
 }
@@ -239,9 +270,7 @@ fun ReflectionScreen(onNavigateBack: () -> Unit) {
 
 /* ------------------------- PREVIEWS ------------------------- */
 // Previews call the screens with stub lambdas so they compile
-@Preview(showBackground = true)
-@Composable
-fun HomePreview() { HomeScreen({}, {}) }
+
 
 @Preview(showBackground = true)
 @Composable
@@ -250,3 +279,123 @@ fun TimerPreview() { FocusTimerScreen({}) }
 @Preview(showBackground = true)
 @Composable
 fun ReflectionPreview() { ReflectionScreen({}) }
+/* ------------------------- LOGIN SCREEN ------------------------- */
+@Composable
+fun LoginScreen(
+    onLoginSuccess: () -> Unit,
+    onNavigateToRegister: () -> Unit
+) {
+    var email = remember { mutableStateOf("") }
+    var password = remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFE3F2FD))
+            .padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text("Welcome Back 👋", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = email.value,
+            onValueChange = { email.value = it },
+            label = { Text("Email") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = password.value,
+            onValueChange = { password.value = it },
+            label = { Text("Password") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            visualTransformation = PasswordVisualTransformation()
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = onLoginSuccess,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(Color(0xFF1976D2))
+        ) { Text("Login") }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        TextButton(onClick = onNavigateToRegister) {
+            Text("Don't have an account? Register")
+        }
+    }
+}
+
+/* ------------------------- REGISTER SCREEN ------------------------- */
+@Composable
+fun RegisterScreen(
+    onRegisterSuccess: () -> Unit,
+    onNavigateToLogin: () -> Unit
+) {
+    var name = remember { mutableStateOf("") }
+    var email = remember { mutableStateOf("") }
+    var password = remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFFFF3E0))
+            .padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text("Create Account ✨", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = name.value,
+            onValueChange = { name.value = it },
+            label = { Text("Full Name") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = email.value,
+            onValueChange = { email.value = it },
+            label = { Text("Email") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = password.value,
+            onValueChange = { password.value = it },
+            label = { Text("Password") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            visualTransformation = PasswordVisualTransformation()
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = onRegisterSuccess,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(Color(0xFFF57C00))
+        ) { Text("Register") }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        TextButton(onClick = onNavigateToLogin) {
+            Text("Already have an account? Login")
+        }
+    }
+}
