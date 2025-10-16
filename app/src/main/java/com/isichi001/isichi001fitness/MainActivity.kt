@@ -1,37 +1,26 @@
 package com.isichi001.isichi001fitness
 
-//import android.R.attr.name
-import android.R.attr.text
-import android.content.Context
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Button
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.isichi001.isichi001fitness.ui.theme.Isichi001FitnessTheme
-import androidx.compose.material3.Surface
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+
+import com.isichi001.isichi001fitness.ui.theme.Isichi001FitnessTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -39,100 +28,225 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             Isichi001FitnessTheme {
-                //Scaffold- layout component for material design layout
-                // top app bar, bottom bar, drawer ...
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    // Greeting(
-                    //   name = "Android",
-                    //   modifier = Modifier.padding(innerPadding)
-                    //)
-                    Testlayout(modifier = Modifier.padding(innerPadding))
-                }
+                // ✅ Single, clean entry point
+                FitnessAppNavigation()
             }
         }
     }
 }
+
+/* ------------------------- NAVIGATION GRAPH ------------------------- */
 @Composable
-fun Testlayout(modifier: Modifier = Modifier) {
-    val context = LocalContext.current
-    Row (modifier = modifier.fillMaxSize()){
-        Column (modifier = Modifier.fillMaxHeight().width(100.dp).background(Color.Red),
-            verticalArrangement = Arrangement.SpaceEvenly
-        ) {
-            repeat(6){
-                //clickable image
-                val context = LocalContext.current
-                val dice_num = 1 + it
-                //display a dice
-                Image(
-                    painter = painterResource(image_ids[it]),
-                    contentDescription = "Dice $it")
-                modifier.clickable{
-                    Toast.makeText(context, "Click dice $it", Toast.LENGTH_SHORT).show()
+fun FitnessAppNavigation() {
+    val navController = rememberNavController()
 
-                }
-
-
-                Image(painter = painterResource(image_ids[it]),
-                    contentDescription = "Dice $it")
-
-                Image(painter = painterResource(image_ids[it]),
-                    contentDescription = "Dice $it")
-
-                Image(painter = painterResource(image_ids[it]),
-                    contentDescription = "Dice $it")
-
-                Image(painter = painterResource(image_ids[it]),
-                    contentDescription = "Dice $it")
-
-
-            }
+    NavHost(
+        navController = navController,
+        startDestination = "home"
+    ) {
+        composable("home") {
+            HomeScreen(
+                onNavigateToTimer = { navController.navigate("focusTimer") },
+                onNavigateToReflection = { navController.navigate("reflection") }
+            )
         }
-        Column (modifier = Modifier.fillMaxHeight().width(100.dp).background(Color.Yellow),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(text = "Column 2")
+        composable("focusTimer") {
+            FocusTimerScreen(onNavigateBack = { navController.popBackStack() })
         }
-        Column (modifier = Modifier.fillMaxHeight().fillMaxWidth().background(Color.Green),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-           // Text(text = "Column 3")
-            Button(onClick =  {
-                Toast.makeText(context, "You clicked me", Toast.LENGTH_SHORT).show()
-            })  {
-                    Text("Click me")
-                }
-            }
+        composable("reflection") {
+            ReflectionScreen(onNavigateBack = { navController.popBackStack() })
         }
     }
+}
 
+/* ------------------------- HOME SCREEN ------------------------- */
+@Composable
+fun HomeScreen(
+    onNavigateToTimer: () -> Unit,
+    onNavigateToReflection: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFD6EAF8))
+            .padding(16.dp),
+        verticalArrangement = Arrangement.SpaceBetween
+    ) {
+        // Greeting
+        Column {
+            Text(
+                text = "Hello, Laurreine 👋",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(text = "\"Stay focused and consistent!\"")
+        }
+
+        // Progress section
+        Column {
+            Text(text = "Today's Progress", fontWeight = FontWeight.SemiBold)
+            LinearProgressIndicator(
+                progress = 0.6f,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(10.dp)
+                    .padding(vertical = 8.dp),
+                color = Color(0xFF3498DB)
+            )
+        }
+
+        // Row with quick stats
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            StatCard(title = "Tasks", value = "5")
+            StatCard(title = "Focus Hours", value = "2.5h")
+        }
+
+        // Task list
+        Column {
+            Text(text = "Today's Tasks", fontWeight = FontWeight.SemiBold)
+            Spacer(modifier = Modifier.height(6.dp))
+            TaskItem("Study for Algorithms Exam")
+            TaskItem("Watch Networking Lecture")
+            TaskItem("Group Project Research")
+        }
+
+        // Navigation buttons
+        Column {
+            Button(
+                onClick = onNavigateToTimer,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(Color(0xFF3498DB))
+            ) { Text("Go to Focus Timer") }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Button(
+                onClick = onNavigateToReflection,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(Color(0xFF9B59B6))
+            ) { Text("Go to Reflection") }
+        }
+    }
+}
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Surface(color = Color.Green) {
+fun StatCard(title: String, value: String) {
+    Card(
+        modifier = Modifier
+            .width(150.dp)
+            .padding(4.dp),
+        shape = RoundedCornerShape(10.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .background(Color.White)
+                .padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(text = title, fontWeight = FontWeight.SemiBold)
+            Text(text = value, fontSize = 20.sp, color = Color(0xFF3498DB))
+        }
+    }
+}
+
+@Composable
+fun TaskItem(task: String) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        shape = RoundedCornerShape(8.dp)
+    ) {
         Text(
-            text = "Hello, $name!",
-            modifier = modifier .padding(24.dp)
+            text = task,
+            modifier = Modifier.padding(10.dp)
         )
     }
 }
 
-@Preview(showBackground = true)
+/* ------------------------- FOCUS TIMER SCREEN ------------------------- */
 @Composable
-fun GreetingPreview() {
-    Isichi001FitnessTheme {
-        Greeting("Android")
+fun FocusTimerScreen(onNavigateBack: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFD4EFDF))
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text("Focus Timer ⏳", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(20.dp))
+        Text("00:25:00", fontSize = 40.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Row(
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Button(onClick = { }) { Text("Start") }
+            Button(onClick = { }) { Text("Pause") }
+            Button(onClick = { }) { Text("Reset") }
+        }
+
+        Spacer(modifier = Modifier.height(25.dp))
+        Button(onClick = onNavigateBack) { Text("Back to Home") }
     }
 }
 
-private val image_ids = listOf (
-    R.drawable.dice_1,
-    R.drawable.dice_2,
-    R.drawable.dice_3,
-    R.drawable.dice_4,
-    R.drawable.dice_5,
-    R.drawable.dice_6
-)
+/* ------------------------- REFLECTION SCREEN ------------------------- */
 
+@Composable
+fun ReflectionScreen(onNavigateBack: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFE8DAEF))
+            .padding(16.dp),
+        verticalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text("Weekly Reflection 🧠", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(150.dp),
+            shape = RoundedCornerShape(10.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                Text("[Bar Chart Placeholder]")
+            }
+        }
+
+        Column {
+            Text("Summary", fontWeight = FontWeight.SemiBold)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("• Total study time: 14h")
+            Text("• Completed tasks: 12")
+            Text("• Average focus: 78%")
+        }
+
+        Button(
+            onClick = onNavigateBack,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(Color(0xFF9B59B6))
+        ) { Text("Back to Home") }
+    }
+}
+
+/* ------------------------- PREVIEWS ------------------------- */
+// Previews call the screens with stub lambdas so they compile
+@Preview(showBackground = true)
+@Composable
+fun HomePreview() { HomeScreen({}, {}) }
+
+@Preview(showBackground = true)
+@Composable
+fun TimerPreview() { FocusTimerScreen({}) }
+
+@Preview(showBackground = true)
+@Composable
+fun ReflectionPreview() { ReflectionScreen({}) }
