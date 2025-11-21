@@ -363,9 +363,28 @@ fun FocusTimerScreen(onNavigateBack: () -> Unit) {
     }
 }
 
-/* ------------------------- REFLECTION SCREEN (unchanged for now) ------------------------- */
+/* ------------------------- REFLECTION SCREEN ------------------------- */
 @Composable
 fun ReflectionScreen(onNavigateBack: () -> Unit) {
+
+    val context = LocalContext.current
+    val database = remember { StudyTimeDatabase.getDatabase(context) }
+    val repository = remember { TaskRepository(database.taskDao()) }
+    val taskViewModel: TaskViewModel = viewModel(
+        factory = TaskViewModelFactory(repository)
+    )
+
+    // Read all tasks from DB
+    val tasks by taskViewModel.allTasks.collectAsState()
+
+    // Stats
+    val totalTasks = tasks.size
+    val completedTasks = tasks.count { it.isCompleted }
+    val totalMinutes = tasks.sumOf { it.plannedMinutes }
+    val completionPercent =
+        if (totalTasks == 0) 0f
+        else completedTasks.toFloat() / totalTasks
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -375,23 +394,48 @@ fun ReflectionScreen(onNavigateBack: () -> Unit) {
     ) {
         Text("Weekly Reflection 🧠", fontSize = 22.sp, fontWeight = FontWeight.Bold)
 
+        // Simple "bar chart"
         Card(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(150.dp),
             shape = RoundedCornerShape(10.dp)
         ) {
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                Text("[Bar Chart Placeholder]")
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+            ) {
+                Text("Completion Rate", fontWeight = FontWeight.SemiBold)
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(30.dp)
+                        .background(Color.LightGray, RoundedCornerShape(8.dp))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(completionPercent)
+                            .background(Color(0xFF9B59B6), RoundedCornerShape(8.dp))
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(String.format("Completed: %.0f%%", completionPercent * 100))
             }
         }
 
+        // Summary from REAL DB data
         Column {
             Text("Summary", fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.height(8.dp))
-            Text("• Total study time: 14h")
-            Text("• Completed tasks: 12")
-            Text("• Average focus: 78%")
+
+            Text("• Total tasks: $totalTasks")
+            Text("• Completed tasks: $completedTasks")
+            Text("• Total planned time: ${totalMinutes} min")
+            Text("• Completion rate: ${"%.0f".format(completionPercent * 100)}%")
         }
 
         Button(
@@ -401,6 +445,7 @@ fun ReflectionScreen(onNavigateBack: () -> Unit) {
         ) { Text("Back to Home") }
     }
 }
+
 
 /* ------------------------- PREVIEWS ------------------------- */
 @Preview(showBackground = true)
