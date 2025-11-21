@@ -6,18 +6,18 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -26,7 +26,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.lifecycle.viewmodel.compose.viewModel
-
 import com.isichi001.StudyTimeApp.ui.theme.Isichi001FitnessTheme
 
 class MainActivity : ComponentActivity() {
@@ -35,7 +34,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             Isichi001FitnessTheme {
-                // ✅ Single, clean entry point
+                // Single, clean entry point
                 FitnessAppNavigation()
             }
         }
@@ -45,7 +44,7 @@ class MainActivity : ComponentActivity() {
 /* ------------------------- NAVIGATION + VIEWMODEL ROOT ------------------------- */
 @Composable
 fun FitnessAppNavigation() {
-    // 🔹 1. Build DB, Repository, and ViewModel ONCE for the whole app
+    // Build DB, Repository, and ViewModel once for the whole app
     val context = LocalContext.current
     val database = remember { StudyTimeDatabase.getDatabase(context) }
     val repository = remember { TaskRepository(database.taskDao()) }
@@ -57,7 +56,7 @@ fun FitnessAppNavigation() {
 
     NavHost(
         navController = navController,
-        startDestination = "login"  // 👈 start from login page
+        startDestination = "login"
     ) {
         composable("login") {
             LoginScreen(
@@ -73,7 +72,7 @@ fun FitnessAppNavigation() {
         }
         composable("home") {
             HomeScreen(
-                viewModel = taskViewModel,   // 🔹 ViewModel now available in Home
+                viewModel = taskViewModel,
                 onNavigateToTimer = { navController.navigate("focusTimer") },
                 onNavigateToReflection = { navController.navigate("reflection") },
                 onLogout = {
@@ -92,15 +91,21 @@ fun FitnessAppNavigation() {
     }
 }
 
-
 /* ------------------------- HOME SCREEN ------------------------- */
 @Composable
 fun HomeScreen(
-    viewModel: TaskViewModel,              // 🔹 now receives the ViewModel
+    viewModel: TaskViewModel,
     onNavigateToTimer: () -> Unit,
     onNavigateToReflection: () -> Unit,
     onLogout: () -> Unit
 ) {
+    // Live tasks from the database
+    val tasks by viewModel.allTasks.collectAsState()
+
+    // State for "Add task" inputs
+    var newTitle by remember { mutableStateOf("") }
+    var newMinutesText by remember { mutableStateOf("") }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -118,11 +123,14 @@ fun HomeScreen(
             Text(text = "\"Stay focused and consistent!\"")
         }
 
-        // Progress section (later we can drive this from viewModel)
+        // Progress section – based on real tasks
         Column {
             Text(text = "Today's Progress", fontWeight = FontWeight.SemiBold)
+            val progress =
+                if (tasks.isEmpty()) 0f
+                else tasks.count { it.isCompleted }.toFloat() / tasks.size
             LinearProgressIndicator(
-                progress = 0.6f,
+                progress = progress,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(10.dp)
@@ -131,25 +139,81 @@ fun HomeScreen(
             )
         }
 
-        // Row with quick stats
+        // Quick stats from real tasks
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            StatCard(title = "Tasks", value = "5")
-            StatCard(title = "Focus Hours", value = "2.5h")
+            val totalMinutes = tasks.sumOf { it.plannedMinutes }
+            StatCard(title = "Tasks", value = tasks.size.toString())
+            StatCard(title = "Focus Minutes", value = "${totalMinutes}m")
         }
 
-        // Task list (soon will come from DB via viewModel.allTasks)
+        // Add Task section
         Column {
+            Text(text = "Add Task", fontWeight = FontWeight.SemiBold)
+            Spacer(modifier = Modifier.height(6.dp))
+
+            OutlinedTextField(
+                value = newTitle,
+                onValueChange = { newTitle = it },
+                label = { Text("Task title") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = newMinutesText,
+                onValueChange = { newMinutesText = it },
+                label = { Text("Planned minutes") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Button(
+                onClick = {
+                    val minutes = newMinutesText.toIntOrNull() ?: 25
+                    if (newTitle.isNotBlank()) {
+                        viewModel.addTask(newTitle, minutes)
+                        newTitle = ""
+                        newMinutesText = ""
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(Color(0xFF3498DB))
+            ) { Text("Add Task") }
+        }
+
+        // Task list – live from DB
+        Column(
+            modifier = Modifier
+                .weight(1f, fill = true)
+                .padding(top = 8.dp)
+        ) {
             Text(text = "Today's Tasks", fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.height(6.dp))
-            TaskItem("Study for Algorithms Exam")
-            TaskItem("Watch Networking Lecture")
-            TaskItem("Group Project Research")
+
+            if (tasks.isEmpty()) {
+                Text("No tasks yet. Add one above 😊")
+            } else {
+                LazyColumn {
+                    items(tasks) { task ->
+                        TaskItem(
+                            task = task,
+                            onCheckedChange = { checked ->
+                                viewModel.updateTask(task.copy(isCompleted = checked))
+                            },
+                            onDelete = { viewModel.deleteTask(task) }
+                        )
+                    }
+                }
+            }
         }
 
-        // Navigation buttons
+        // Navigation + logout
         Column {
             Button(
                 onClick = onNavigateToTimer,
@@ -199,21 +263,51 @@ fun StatCard(title: String, value: String) {
 }
 
 @Composable
-fun TaskItem(task: String) {
+fun TaskItem(
+    task: Task,
+    onCheckedChange: (Boolean) -> Unit,
+    onDelete: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
         shape = RoundedCornerShape(8.dp)
     ) {
-        Text(
-            text = task,
-            modifier = Modifier.padding(10.dp)
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .padding(8.dp)
+        ) {
+            Checkbox(
+                checked = task.isCompleted,
+                onCheckedChange = onCheckedChange
+            )
+
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 8.dp)
+            ) {
+                Text(
+                    text = task.title,
+                    fontWeight = if (task.isCompleted) FontWeight.SemiBold else FontWeight.Normal
+                )
+                Text(
+                    text = "${task.plannedMinutes} min",
+                    fontSize = 12.sp,
+                    color = Color.Gray
+                )
+            }
+
+            TextButton(onClick = onDelete) {
+                Text("Delete")
+            }
+        }
     }
 }
 
-/* ------------------------- FOCUS TIMER SCREEN ------------------------- */
+/* ------------------------- FOCUS TIMER SCREEN (unchanged for now) ------------------------- */
 @Composable
 fun FocusTimerScreen(onNavigateBack: () -> Unit) {
     Column(
@@ -243,8 +337,7 @@ fun FocusTimerScreen(onNavigateBack: () -> Unit) {
     }
 }
 
-/* ------------------------- REFLECTION SCREEN ------------------------- */
-
+/* ------------------------- REFLECTION SCREEN (unchanged for now) ------------------------- */
 @Composable
 fun ReflectionScreen(onNavigateBack: () -> Unit) {
     Column(
@@ -284,7 +377,6 @@ fun ReflectionScreen(onNavigateBack: () -> Unit) {
 }
 
 /* ------------------------- PREVIEWS ------------------------- */
-
 @Preview(showBackground = true)
 @Composable
 fun TimerPreview() { FocusTimerScreen({}) }
