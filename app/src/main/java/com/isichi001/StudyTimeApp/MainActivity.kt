@@ -26,6 +26,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.delay
 import com.isichi001.StudyTimeApp.ui.theme.Isichi001FitnessTheme
 
 class MainActivity : ComponentActivity() {
@@ -310,6 +312,27 @@ fun TaskItem(
 /* ------------------------- FOCUS TIMER SCREEN (unchanged for now) ------------------------- */
 @Composable
 fun FocusTimerScreen(onNavigateBack: () -> Unit) {
+    // 25-minute timer by default
+    val totalSeconds = 25 * 60
+
+    var remainingSeconds by remember { mutableStateOf(totalSeconds) }
+    var isRunning by remember { mutableStateOf(false) }
+
+    // Timer logic – runs when isRunning changes
+    LaunchedEffect(isRunning) {
+        while (isRunning && remainingSeconds > 0) {
+            delay(1000L)
+            remainingSeconds--
+        }
+        if (remainingSeconds == 0) {
+            isRunning = false
+        }
+    }
+
+    val minutes = remainingSeconds / 60
+    val seconds = remainingSeconds % 60
+    val timeText = String.format("%02d:%02d", minutes, seconds)
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -320,16 +343,19 @@ fun FocusTimerScreen(onNavigateBack: () -> Unit) {
     ) {
         Text("Focus Timer ⏳", fontSize = 22.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(20.dp))
-        Text("00:25:00", fontSize = 40.sp, fontWeight = FontWeight.Bold)
+        Text(timeText, fontSize = 40.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(20.dp))
 
         Row(
             horizontalArrangement = Arrangement.SpaceEvenly,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Button(onClick = { }) { Text("Start") }
-            Button(onClick = { }) { Text("Pause") }
-            Button(onClick = { }) { Text("Reset") }
+            Button(onClick = { isRunning = true }) { Text("Start") }
+            Button(onClick = { isRunning = false }) { Text("Pause") }
+            Button(onClick = {
+                isRunning = false
+                remainingSeconds = totalSeconds
+            }) { Text("Reset") }
         }
 
         Spacer(modifier = Modifier.height(25.dp))
