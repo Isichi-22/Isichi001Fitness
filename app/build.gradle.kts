@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.isichi001.isichi001fitness"
+    namespace = "com.isichi001.StudyTimeApp"
     compileSdk = 36
 
     defaultConfig {

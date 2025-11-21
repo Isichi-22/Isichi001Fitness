@@ -1,4 +1,4 @@
-package com.isichi001.isichi001fitness
+package com.isichi001.StudyTimeApp
 
 import org.junit.Test
 

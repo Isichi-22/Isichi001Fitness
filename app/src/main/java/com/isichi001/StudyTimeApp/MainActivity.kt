@@ -1,6 +1,5 @@
-package com.isichi001.isichi001fitness
+package com.isichi001.StudyTimeApp
 
-import android.R.attr.onClick
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -24,7 +23,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 
-import com.isichi001.isichi001fitness.ui.theme.Isichi001FitnessTheme
+import com.isichi001.StudyTimeApp.ui.theme.Isichi001FitnessTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

@@ -1,4 +1,4 @@
-package com.isichi001.isichi001fitness.ui.theme
+package com.isichi001.StudyTimeApp.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
