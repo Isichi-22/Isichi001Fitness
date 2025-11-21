@@ -14,19 +14,15 @@ interface TaskDao {
     @Query("SELECT * FROM tasks ORDER BY id DESC")
     fun getAllTasks(): Flow<List<Task>>
 
-    // Insert a new task
     @Insert
     suspend fun insertTask(task: Task)
 
-    // Update an existing task (e.g. mark complete)
     @Update
     suspend fun updateTask(task: Task)
 
-    // Delete a single task
     @Delete
     suspend fun deleteTask(task: Task)
 
-    // Clear all tasks (optional but handy)
     @Query("DELETE FROM tasks")
-    suspend fun deleteAll()
+    suspend fun deleteAllTasks()
 }
