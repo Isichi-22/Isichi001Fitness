@@ -11,9 +11,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
@@ -22,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 import com.isichi001.StudyTimeApp.ui.theme.Isichi001FitnessTheme
 
@@ -38,9 +42,17 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-/* ------------------------- NAVIGATION ------------------------- */
+/* ------------------------- NAVIGATION + VIEWMODEL ROOT ------------------------- */
 @Composable
 fun FitnessAppNavigation() {
+    // 🔹 1. Build DB, Repository, and ViewModel ONCE for the whole app
+    val context = LocalContext.current
+    val database = remember { StudyTimeDatabase.getDatabase(context) }
+    val repository = remember { TaskRepository(database.taskDao()) }
+    val taskViewModel: TaskViewModel = viewModel(
+        factory = TaskViewModelFactory(repository)
+    )
+
     val navController = rememberNavController()
 
     NavHost(
@@ -61,6 +73,7 @@ fun FitnessAppNavigation() {
         }
         composable("home") {
             HomeScreen(
+                viewModel = taskViewModel,   // 🔹 ViewModel now available in Home
                 onNavigateToTimer = { navController.navigate("focusTimer") },
                 onNavigateToReflection = { navController.navigate("reflection") },
                 onLogout = {
@@ -83,6 +96,7 @@ fun FitnessAppNavigation() {
 /* ------------------------- HOME SCREEN ------------------------- */
 @Composable
 fun HomeScreen(
+    viewModel: TaskViewModel,              // 🔹 now receives the ViewModel
     onNavigateToTimer: () -> Unit,
     onNavigateToReflection: () -> Unit,
     onLogout: () -> Unit
@@ -104,7 +118,7 @@ fun HomeScreen(
             Text(text = "\"Stay focused and consistent!\"")
         }
 
-        // Progress section
+        // Progress section (later we can drive this from viewModel)
         Column {
             Text(text = "Today's Progress", fontWeight = FontWeight.SemiBold)
             LinearProgressIndicator(
@@ -126,7 +140,7 @@ fun HomeScreen(
             StatCard(title = "Focus Hours", value = "2.5h")
         }
 
-        // Task list
+        // Task list (soon will come from DB via viewModel.allTasks)
         Column {
             Text(text = "Today's Tasks", fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.height(6.dp))
@@ -150,14 +164,16 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(Color(0xFF9B59B6))
             ) { Text("Go to Reflection") }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             Button(
-                onClick = { onLogout() },
+                onClick = onLogout,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(Color(0xFFE74C3C))
             ) {
                 Text("Logout")
             }
-
         }
     }
 }
@@ -268,8 +284,6 @@ fun ReflectionScreen(onNavigateBack: () -> Unit) {
 }
 
 /* ------------------------- PREVIEWS ------------------------- */
-// Previews call the screens with stub lambdas so they compile
-
 
 @Preview(showBackground = true)
 @Composable
@@ -278,6 +292,7 @@ fun TimerPreview() { FocusTimerScreen({}) }
 @Preview(showBackground = true)
 @Composable
 fun ReflectionPreview() { ReflectionScreen({}) }
+
 /* ------------------------- LOGIN SCREEN ------------------------- */
 @Composable
 fun LoginScreen(
