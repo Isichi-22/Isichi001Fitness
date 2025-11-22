@@ -26,7 +26,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.runtime.LaunchedEffect
 import kotlinx.coroutines.delay
 import com.isichi001.StudyTimeApp.ui.theme.Isichi001FitnessTheme
 
@@ -36,7 +35,6 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             Isichi001FitnessTheme {
-                // Single, clean entry point
                 FitnessAppNavigation()
             }
         }
@@ -46,10 +44,13 @@ class MainActivity : ComponentActivity() {
 /* ------------------------- NAVIGATION + VIEWMODEL ROOT ------------------------- */
 @Composable
 fun FitnessAppNavigation() {
-    // Build DB, Repository, and ViewModel once for the whole app
     val context = LocalContext.current
+
+    // Build DB + repository once for the whole app
     val database = remember { StudyTimeDatabase.getDatabase(context) }
-    val repository = remember { TaskRepository(database.taskDao()) }
+    val repository = remember { TaskRepository(database.taskDao(), database.reflectionDao()) }
+
+    // ViewModel shared across screens
     val taskViewModel: TaskViewModel = viewModel(
         factory = TaskViewModelFactory(repository)
     )
@@ -88,7 +89,10 @@ fun FitnessAppNavigation() {
             FocusTimerScreen(onNavigateBack = { navController.popBackStack() })
         }
         composable("reflection") {
-            ReflectionScreen(onNavigateBack = { navController.popBackStack() })
+            ReflectionScreen(
+                viewModel = taskViewModel,               // <-- STEP 2: ViewModel passed here
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
     }
 }
@@ -101,10 +105,8 @@ fun HomeScreen(
     onNavigateToReflection: () -> Unit,
     onLogout: () -> Unit
 ) {
-    // Live tasks from the database
     val tasks by viewModel.allTasks.collectAsState()
 
-    // State for "Add task" inputs
     var newTitle by remember { mutableStateOf("") }
     var newMinutesText by remember { mutableStateOf("") }
 
@@ -141,7 +143,7 @@ fun HomeScreen(
             )
         }
 
-        // Quick stats from real tasks
+        // Quick stats
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
@@ -170,6 +172,7 @@ fun HomeScreen(
                 onValueChange = { newMinutesText = it },
                 label = { Text("Planned minutes") },
                 modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true
             )
 
@@ -189,7 +192,7 @@ fun HomeScreen(
             ) { Text("Add Task") }
         }
 
-        // Task list – live from DB
+        // Task list
         Column(
             modifier = Modifier
                 .weight(1f, fill = true)
@@ -278,8 +281,7 @@ fun TaskItem(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .padding(8.dp)
+            modifier = Modifier.padding(8.dp)
         ) {
             Checkbox(
                 checked = task.isCompleted,
@@ -309,16 +311,14 @@ fun TaskItem(
     }
 }
 
-/* ------------------------- FOCUS TIMER SCREEN (unchanged for now) ------------------------- */
+/* ------------------------- FOCUS TIMER SCREEN ------------------------- */
 @Composable
 fun FocusTimerScreen(onNavigateBack: () -> Unit) {
-    // 25-minute timer by default
     val totalSeconds = 25 * 60
 
     var remainingSeconds by remember { mutableStateOf(totalSeconds) }
     var isRunning by remember { mutableStateOf(false) }
 
-    // Timer logic – runs when isRunning changes
     LaunchedEffect(isRunning) {
         while (isRunning && remainingSeconds > 0) {
             delay(1000L)
@@ -363,27 +363,21 @@ fun FocusTimerScreen(onNavigateBack: () -> Unit) {
     }
 }
 
-/* ------------------------- REFLECTION SCREEN ------------------------- */
+/* ------------------------- REFLECTION SCREEN (DB-BACKED) ------------------------- */
 @Composable
-fun ReflectionScreen(onNavigateBack: () -> Unit) {
+fun ReflectionScreen(
+    viewModel: TaskViewModel,
+    onNavigateBack: () -> Unit
+) {
+    val tasks by viewModel.allTasks.collectAsState()
+    val latestNote by viewModel.latestReflection.collectAsState()
 
-    val context = LocalContext.current
-    val database = remember { StudyTimeDatabase.getDatabase(context) }
-    val repository = remember { TaskRepository(database.taskDao()) }
-    val taskViewModel: TaskViewModel = viewModel(
-        factory = TaskViewModelFactory(repository)
-    )
-
-    // Read all tasks from DB
-    val tasks by taskViewModel.allTasks.collectAsState()
-
-    // Stats
     val totalTasks = tasks.size
     val completedTasks = tasks.count { it.isCompleted }
     val totalMinutes = tasks.sumOf { it.plannedMinutes }
-    val completionPercent =
-        if (totalTasks == 0) 0f
-        else completedTasks.toFloat() / totalTasks
+
+    var mood by remember(latestNote) { mutableStateOf((latestNote?.moodIndex ?: 5).toFloat()) }
+    var text by remember(latestNote) { mutableStateOf(latestNote?.content ?: "") }
 
     Column(
         modifier = Modifier
@@ -392,69 +386,97 @@ fun ReflectionScreen(onNavigateBack: () -> Unit) {
             .padding(16.dp),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Text("Weekly Reflection 🧠", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Text("Daily Reflection 🧠", fontSize = 22.sp, fontWeight = FontWeight.Bold)
 
-        // Simple "bar chart"
+        // Summary Card
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(150.dp),
+                .padding(vertical = 8.dp),
             shape = RoundedCornerShape(10.dp)
         ) {
             Column(
                 modifier = Modifier
+                    .background(Color.White)
                     .padding(16.dp)
             ) {
-                Text("Completion Rate", fontWeight = FontWeight.SemiBold)
-                Spacer(modifier = Modifier.height(12.dp))
+                Text("Today's Summary", fontWeight = FontWeight.SemiBold)
+                Spacer(modifier = Modifier.height(8.dp))
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(30.dp)
-                        .background(Color.LightGray, RoundedCornerShape(8.dp))
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .fillMaxWidth(completionPercent)
-                            .background(Color(0xFF9B59B6), RoundedCornerShape(8.dp))
-                    )
-                }
+                Text("• Total tasks: $totalTasks")
+                Text("• Completed tasks: $completedTasks")
+                Text("• Planned focus time: ${totalMinutes} min")
 
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(String.format("Completed: %.0f%%", completionPercent * 100))
+
+                if (tasks.isEmpty()) {
+                    Text("No tasks yet today. Add some on the Home screen 😊")
+                } else {
+                    Text("Tasks:", fontWeight = FontWeight.SemiBold)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    tasks.forEach { task ->
+                        val status = if (task.isCompleted) "✅" else "⬜"
+                        Text("$status ${task.title} (${task.plannedMinutes} min)")
+                    }
+                }
             }
         }
 
-        // Summary from REAL DB data
+        // Mood slider
         Column {
-            Text("Summary", fontWeight = FontWeight.SemiBold)
+            Text("How do you feel about today?", fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.height(8.dp))
 
-            Text("• Total tasks: $totalTasks")
-            Text("• Completed tasks: $completedTasks")
-            Text("• Total planned time: ${totalMinutes} min")
-            Text("• Completion rate: ${"%.0f".format(completionPercent * 100)}%")
+            Slider(
+                value = mood,
+                onValueChange = { mood = it },
+                valueRange = 1f..10f
+            )
+            Text("Mood: ${mood.toInt()}/10")
         }
 
-        Button(
-            onClick = onNavigateBack,
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(Color(0xFF9B59B6))
-        ) { Text("Back to Home") }
+        // Reflection text
+        Column {
+            Text("Write your reflection for today", fontWeight = FontWeight.SemiBold)
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(160.dp),
+                placeholder = {
+                    Text("What went well? What will you improve tomorrow?")
+                }
+            )
+        }
+
+        Column {
+            Button(
+                onClick = {
+                    viewModel.saveReflection(
+                        moodIndex = mood.toInt(),
+                        content = text
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(Color(0xFF9B59B6))
+            ) { Text("Save Reflection") }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Button(
+                onClick = onNavigateBack,
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("Back to Home") }
+        }
     }
 }
 
-
-/* ------------------------- PREVIEWS ------------------------- */
+/* ------------------------- PREVIEW ------------------------- */
 @Preview(showBackground = true)
 @Composable
 fun TimerPreview() { FocusTimerScreen({}) }
-
-@Preview(showBackground = true)
-@Composable
-fun ReflectionPreview() { ReflectionScreen({}) }
 
 /* ------------------------- LOGIN SCREEN ------------------------- */
 @Composable
@@ -462,8 +484,8 @@ fun LoginScreen(
     onLoginSuccess: () -> Unit,
     onNavigateToRegister: () -> Unit
 ) {
-    var email = remember { mutableStateOf("") }
-    var password = remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -473,12 +495,13 @@ fun LoginScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Welcome Back 👋", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text("StudyTimeApp 📚", fontSize = 26.sp, fontWeight = FontWeight.Bold)
+        Text("Welcome back!", fontSize = 18.sp)
         Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedTextField(
-            value = email.value,
-            onValueChange = { email.value = it },
+            value = email,
+            onValueChange = { email = it },
             label = { Text("Email") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
@@ -487,8 +510,8 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedTextField(
-            value = password.value,
-            onValueChange = { password.value = it },
+            value = password,
+            onValueChange = { password = it },
             label = { Text("Password") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
@@ -517,9 +540,9 @@ fun RegisterScreen(
     onRegisterSuccess: () -> Unit,
     onNavigateToLogin: () -> Unit
 ) {
-    var name = remember { mutableStateOf("") }
-    var email = remember { mutableStateOf("") }
-    var password = remember { mutableStateOf("") }
+    var name by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -533,8 +556,8 @@ fun RegisterScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedTextField(
-            value = name.value,
-            onValueChange = { name.value = it },
+            value = name,
+            onValueChange = { name = it },
             label = { Text("Full Name") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
@@ -543,8 +566,8 @@ fun RegisterScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedTextField(
-            value = email.value,
-            onValueChange = { email.value = it },
+            value = email,
+            onValueChange = { email = it },
             label = { Text("Email") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
@@ -553,8 +576,8 @@ fun RegisterScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedTextField(
-            value = password.value,
-            onValueChange = { password.value = it },
+            value = password,
+            onValueChange = { password = it },
             label = { Text("Password") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
