@@ -5,10 +5,16 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [Task::class], version = 1, exportSchema = false)
+@Database(
+    entities = [Task::class, ReflectionNote::class],
+    version = 2,
+    exportSchema = false
+)
 abstract class StudyTimeDatabase : RoomDatabase() {
 
+    // DAOs that Room will generate implementations for
     abstract fun taskDao(): TaskDao
+    abstract fun reflectionDao(): ReflectionDao
 
     companion object {
         @Volatile
@@ -20,7 +26,11 @@ abstract class StudyTimeDatabase : RoomDatabase() {
                     context.applicationContext,
                     StudyTimeDatabase::class.java,
                     "study_time_database"
-                ).build()
+                )
+                    // If schema changes (like we just added ReflectionNote),
+                    // this wipes and recreates the DB instead of crashing.
+                    .fallbackToDestructiveMigration()
+                    .build()
                 INSTANCE = instance
                 instance
             }
